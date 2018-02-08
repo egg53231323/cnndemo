@@ -16,6 +16,10 @@ android {
             }
         }
 
+        ndk {
+            abiFilters "armeabi-v7a"
+        }
+
         // Remove this block.
         jackOptions {
             enabled true

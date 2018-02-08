@@ -5,6 +5,18 @@
 
 cmake_minimum_required(VERSION 3.4.1)
 
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+endif()
+
+set(ncnn-dir ../../../../src/main/libs/ncnn-android-lib)
+include_directories(${ncnn-dir}/include)
+add_library(libncnn STATIC IMPORTED)
+set_target_properties(libncnn PROPERTIES IMPORTED_LOCATION ${ncnn-dir}/${ANDROID_ABI}/libncnn.a)
+
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
 # You can define multiple libraries, and CMake builds them for you.
@@ -41,4 +53,5 @@ target_link_libraries( # Specifies the target library.
 
                        # Links the target library to the log library
                        # included in the NDK.
-                       ${log-lib} )
+                       ${log-lib}
+                       libncnn )

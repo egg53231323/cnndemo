@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <string>
+#include "../libs/ncnn-android-lib/include/net.h"
 
 extern "C"
 JNIEXPORT jstring
