@@ -17,9 +17,16 @@ package com.example.android.tflitecamerademo;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.util.Log;
+
+import java.util.logging.Logger;
 
 /** Main {@code Activity} class for the Camera app. */
 public class CameraActivity extends Activity {
+
+  static {
+    System.loadLibrary("native-lib");
+  }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -31,5 +38,9 @@ public class CameraActivity extends Activity {
           .replace(R.id.container, Camera2BasicFragment.newInstance())
           .commit();
     }
+
+    Log.i("CameraActivity", stringFromJNI());
   }
+
+  public native String stringFromJNI();
 }
