@@ -41,7 +41,7 @@ Java_com_h3d_NCNNNet_nativeLoad(JNIEnv *env, jobject instance, jlong obj, jstrin
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_h3d_NCNNNet_nativePredict(JNIEnv *env, jobject instance, jlong obj, jbyteArray data_,
-                                   jint width, jint height, jint format, jfloatArray score_) {
+                                   jint width, jint height, jint format, jint threadNum, jfloatArray score_) {
     NCNNNet *net = (NCNNNet*)obj;
     if (NULL == net || NULL == data_ || NULL == score_) {
         return false;
@@ -49,7 +49,7 @@ Java_com_h3d_NCNNNet_nativePredict(JNIEnv *env, jobject instance, jlong obj, jby
 
     jbyte *data = env->GetByteArrayElements(data_, NULL);
 
-    bool res = net->predict((unsigned char*)data, width, height, format);
+    bool res = net->predict((unsigned char*)data, width, height, format, threadNum);
     if (res) {
         int size = net->getResSize();
         if (size > 0) {

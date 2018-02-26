@@ -19,7 +19,7 @@ public:
 
     bool load(const char *param, const char *model);
     void clear();
-    bool predict(unsigned char *data, int width, int height, int format);
+    bool predict(unsigned char *data, int width, int height, int format, int threadNum = 0);
     int getResSize();
     float *getRes();
 protected:

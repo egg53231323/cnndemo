@@ -41,7 +41,7 @@ void NCNNNet::clear() {
     mNet->clear();
 }
 
-bool NCNNNet::predict(unsigned char *data, int width, int height, int format) {
+bool NCNNNet::predict(unsigned char *data, int width, int height, int format, int threadNum /* = 0*/) {
     ncnn::Mat in = ncnn::Mat::from_pixels(data, format, width, height);
 
     const float mean_vals[3] = {103.94f, 116.78f, 123.68f};
@@ -49,6 +49,9 @@ bool NCNNNet::predict(unsigned char *data, int width, int height, int format) {
     in.substract_mean_normalize(mean_vals, norm_vals);
 
     ncnn::Extractor ex = mNet->create_extractor();
+    if (threadNum > 0) {
+        ex.set_num_threads(threadNum);
+    }
     ex.set_light_mode(true);
 
     ex.input("data", in);

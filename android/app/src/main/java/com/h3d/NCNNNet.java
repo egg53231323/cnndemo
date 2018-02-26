@@ -24,7 +24,7 @@ public class NCNNNet {
     }
 
     public boolean predict(byte[] data, int width, int height, int format) {
-        return nativePredict(mObj, data, width, height, format, mScore);
+        return nativePredict(mObj, data, width, height, format, 4, mScore);
     }
 
     public float[] getScore() {
@@ -34,5 +34,5 @@ public class NCNNNet {
     private native long nativeCreativeInstance();
     private native void nativeDestroyInstance(long obj);
     private native boolean nativeLoad(long obj, String paramPath, String modelPath);
-    private native boolean nativePredict(long obj, byte[] data, int width, int height, int format, float[] score);
+    private native boolean nativePredict(long obj, byte[] data, int width, int height, int format, int threadNum, float[] score);
 }
