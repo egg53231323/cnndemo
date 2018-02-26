@@ -9,6 +9,7 @@
 
 namespace ncnn {
     class Net;
+    class Mat;
 }
 
 class NCNNNet {
@@ -18,9 +19,12 @@ public:
 
     bool load(const char *param, const char *model);
     void clear();
-    bool predict(unsigned char *data, int width, int height, std::vector<float> &scores);
+    bool predict(unsigned char *data, int width, int height, int format);
+    int getResSize();
+    float *getRes();
 protected:
     ncnn::Net *mNet;
+    ncnn::Mat *mRes;
 };
 
 

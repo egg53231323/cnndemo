@@ -18,11 +18,18 @@ package com.example.android.tflitecamerademo;
 import android.app.Activity;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
+import android.os.Environment;
 import android.os.SystemClock;
 import android.util.Log;
+
+import com.h3d.NCNNNet;
+
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -79,6 +86,11 @@ public class ImageClassifier {
   private static final int FILTER_STAGES = 3;
   private static final float FILTER_FACTOR = 0.4f;
 
+  private String mFileDir = "";
+  private static final String NCNN_MOBILE_NET_PARAM_FILE_NAME = "mobilenet_v2.param";
+  private static final String NCNN_MOBILE_NET_MODEL_FILE_NAME = "mobilenet_v2.bin";
+  private NCNNNet mNCNNNet;
+
   private PriorityQueue<Map.Entry<String, Float>> sortedLabels =
       new PriorityQueue<>(
           RESULTS_TO_SHOW,
@@ -100,6 +112,9 @@ public class ImageClassifier {
     labelProbArray = new byte[1][labelList.size()];
     filterLabelProbArray = new float[FILTER_STAGES][labelList.size()];
     Log.d(TAG, "Created a Tensorflow Lite Image Classifier.");
+
+    mFileDir = activity.getFilesDir().getAbsolutePath()+ "/";
+    InitNCNN(activity);
   }
 
   /** Classifies a frame from the preview stream. */
@@ -213,5 +228,43 @@ public class ImageClassifier {
       textToShow = String.format("\n%s: %4.2f", label.getKey(), label.getValue()) + textToShow;
     }
     return textToShow;
+  }
+
+
+  private void InitNCNN(Activity activity) {
+    copyAssetToSDCard(activity, NCNN_MOBILE_NET_PARAM_FILE_NAME);
+    copyAssetToSDCard(activity, NCNN_MOBILE_NET_MODEL_FILE_NAME);
+    mNCNNNet = new NCNNNet();
+    String fileDir = mFileDir;
+    boolean res = mNCNNNet.load(fileDir + NCNN_MOBILE_NET_PARAM_FILE_NAME, fileDir + NCNN_MOBILE_NET_MODEL_FILE_NAME);
+    Log.i(TAG, "NCNN res " + res);
+  }
+
+  private void copyAssetToSDCard(Activity activity, String fileName) {
+    String fileDir = mFileDir;
+    File dir = new File(fileDir);
+    if (!dir.exists()) {
+      dir.mkdir();
+    }
+    String filePath = fileDir + fileName;
+    File file = new File(filePath);
+    if (file.exists()) {
+      file.delete();
+    }
+    try {
+      InputStream inputStream = activity.getAssets().open(fileName);
+      FileOutputStream fileOutputStream = new FileOutputStream(file);
+      byte[] buffer = new byte[1024];
+      int count = 0;
+      while ((count = inputStream.read(buffer)) > 0) {
+        fileOutputStream.write(buffer, 0, count);
+      }
+      fileOutputStream.flush();
+      fileOutputStream.close();
+      inputStream.close();
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 }
