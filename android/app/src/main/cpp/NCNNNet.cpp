@@ -45,9 +45,8 @@ bool NCNNNet::predict(unsigned char *data, int width, int height, int format) {
     ncnn::Mat in = ncnn::Mat::from_pixels(data, format, width, height);
 
     const float mean_vals[3] = {103.94f, 116.78f, 123.68f};
-    //const float norm_vals[3] = {0.017f,0.017f,0.017f};
-    //in.substract_mean_normalize(mean_vals, norm_vals);
-    in.substract_mean_normalize(mean_vals, 0);
+    const float norm_vals[3] = {0.017f,0.017f,0.017f};
+    in.substract_mean_normalize(mean_vals, norm_vals);
 
     ncnn::Extractor ex = mNet->create_extractor();
     ex.set_light_mode(true);
@@ -55,9 +54,9 @@ bool NCNNNet::predict(unsigned char *data, int width, int height, int format) {
     ex.input("data", in);
 
     ncnn::Mat out;
-    ex.extract("fc7", out);
+    ex.extract("prob", out);
 
-    mRes = out.reshape(out.w * out.h * out.c);
+    *mRes = out.reshape(out.w * out.h * out.c);
     return true;
 }
 

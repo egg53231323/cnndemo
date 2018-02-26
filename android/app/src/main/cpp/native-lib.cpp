@@ -4,15 +4,6 @@
 #include "Utility.h"
 
 extern "C"
-JNIEXPORT jstring JNICALL
-Java_com_example_android_tflitecamerademo_CameraActivity_stringFromJNI(
-        JNIEnv *env,
-        jobject /* this */) {
-    std::string hello = "Hello from C++";
-    return env->NewStringUTF(hello.c_str());
-}
-
-extern "C"
 JNIEXPORT jlong JNICALL
 Java_com_h3d_NCNNNet_nativeCreativeInstance(JNIEnv *env, jobject instance) {
     return (jlong)new NCNNNet();
@@ -57,12 +48,10 @@ Java_com_h3d_NCNNNet_nativePredict(JNIEnv *env, jobject instance, jlong obj, jby
     }
 
     jbyte *data = env->GetByteArrayElements(data_, NULL);
-    jfloat *score = env->GetFloatArrayElements(score_, NULL);
 
     bool res = net->predict((unsigned char*)data, width, height, format);
     if (res) {
         int size = net->getResSize();
-        LOGI("ncnn predict size %d", size);
         if (size > 0) {
             float *resData = net->getRes();
             int scoreArrayLength = env->GetArrayLength(score_);
@@ -76,6 +65,5 @@ Java_com_h3d_NCNNNet_nativePredict(JNIEnv *env, jobject instance, jlong obj, jby
     }
 
     env->ReleaseByteArrayElements(data_, data, 0);
-    env->ReleaseFloatArrayElements(score_, score, 0);
     return res;
 }

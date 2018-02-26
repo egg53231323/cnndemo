@@ -38,9 +38,6 @@ public class CameraActivity extends Activity {
           .replace(R.id.container, Camera2BasicFragment.newInstance())
           .commit();
     }
-
-    Log.i("CameraActivity", stringFromJNI());
   }
 
-  public native String stringFromJNI();
 }

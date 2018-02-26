@@ -46,6 +46,11 @@ import org.tensorflow.lite.Interpreter;
 /** Classifies images with Tensorflow Lite. */
 public class ImageClassifier {
 
+  public enum PROCESS_TYPE {
+    TF_LITE, // tensorflow lite
+    NCNN, // tencent ncnn
+    MDL // baidu mobile deep learning
+  }
   /** Tag for the {@link Log}. */
   private static final String TAG = "TfLiteCameraDemo";
 
@@ -86,10 +91,14 @@ public class ImageClassifier {
   private static final int FILTER_STAGES = 3;
   private static final float FILTER_FACTOR = 0.4f;
 
+  private PROCESS_TYPE mType = PROCESS_TYPE.NCNN;
   private String mFileDir = "";
   private static final String NCNN_MOBILE_NET_PARAM_FILE_NAME = "mobilenet_v2.param";
   private static final String NCNN_MOBILE_NET_MODEL_FILE_NAME = "mobilenet_v2.bin";
+  private static final String NCNN_MOBILE_NET_LABEL_FILE_NAME = "mobilenet_v2.txt";
+  private byte[] mImageData;
   private NCNNNet mNCNNNet;
+  private List<String> mNCNNLabelList;
 
   private PriorityQueue<Map.Entry<String, Float>> sortedLabels =
       new PriorityQueue<>(
@@ -104,7 +113,7 @@ public class ImageClassifier {
   /** Initializes an {@code ImageClassifier}. */
   ImageClassifier(Activity activity) throws IOException {
     tflite = new Interpreter(loadModelFile(activity));
-    labelList = loadLabelList(activity);
+    labelList = loadLabelList(activity, LABEL_PATH);
     imgData =
         ByteBuffer.allocateDirect(
             DIM_BATCH_SIZE * DIM_IMG_SIZE_X * DIM_IMG_SIZE_Y * DIM_PIXEL_SIZE);
@@ -114,16 +123,41 @@ public class ImageClassifier {
     Log.d(TAG, "Created a Tensorflow Lite Image Classifier.");
 
     mFileDir = activity.getFilesDir().getAbsolutePath()+ "/";
+    mImageData = new byte[DIM_IMG_SIZE_X * DIM_IMG_SIZE_Y * DIM_PIXEL_SIZE];
     InitNCNN(activity);
+    mNCNNLabelList = loadLabelList(activity, NCNN_MOBILE_NET_LABEL_FILE_NAME);
+    for (int i = 0; i < mNCNNLabelList.size(); i++) {
+      String label = mNCNNLabelList.get(i);
+      if (null != label && label.length() > 12) {
+        label = label.substring(11, label.length() - 1);
+      }
+      mNCNNLabelList.set(i, label);
+    }
   }
 
   /** Classifies a frame from the preview stream. */
   String classifyFrame(Bitmap bitmap) {
-    if (tflite == null) {
-      Log.e(TAG, "Image classifier has not been initialized; Skipped.");
-      return "Uninitialized Classifier.";
-    }
     convertBitmapToByteBuffer(bitmap);
+    String textToShow = "";
+    switch (mType) {
+      case TF_LITE:
+        if (tflite == null) {
+          Log.e(TAG, "Image classifier has not been initialized; Skipped.");
+          return "Uninitialized Classifier.";
+        }
+        textToShow = classifyFrame_TF_Lite();
+        break;
+      case NCNN:
+        textToShow = classifyFrame_NCNN();
+        break;
+      default:
+        textToShow = classifyFrame_TF_Lite();
+        break;
+    }
+    return textToShow;
+  }
+
+  String classifyFrame_TF_Lite() {
     // Here's where the magic happens!!!
     long startTime = SystemClock.uptimeMillis();
     tflite.run(imgData, labelProbArray);
@@ -135,6 +169,16 @@ public class ImageClassifier {
 
     // Print the results.
     String textToShow = printTopKLabels();
+    textToShow = Long.toString(endTime - startTime) + "ms" + textToShow;
+    return textToShow;
+  }
+
+  String classifyFrame_NCNN() {
+    long startTime = SystemClock.uptimeMillis();
+    mNCNNNet.predict(mImageData, DIM_IMG_SIZE_X, DIM_IMG_SIZE_Y, NCNNNet.PIXEL_RGB);
+    long endTime = SystemClock.uptimeMillis();
+    float[] score = mNCNNNet.getScore();
+    String textToShow = printTopKLabels(mNCNNLabelList, score);
     textToShow = Long.toString(endTime - startTime) + "ms" + textToShow;
     return textToShow;
   }
@@ -168,16 +212,16 @@ public class ImageClassifier {
   }
 
   /** Reads label list from Assets. */
-  private List<String> loadLabelList(Activity activity) throws IOException {
-    List<String> labelList = new ArrayList<String>();
+  private List<String> loadLabelList(Activity activity, String fileName) throws IOException {
+    List<String> list = new ArrayList<String>();
     BufferedReader reader =
-        new BufferedReader(new InputStreamReader(activity.getAssets().open(LABEL_PATH)));
+        new BufferedReader(new InputStreamReader(activity.getAssets().open(fileName)));
     String line;
     while ((line = reader.readLine()) != null) {
-      labelList.add(line);
+      list.add(line);
     }
     reader.close();
-    return labelList;
+    return list;
   }
 
   /** Memory-map the model file in Assets. */
@@ -202,10 +246,15 @@ public class ImageClassifier {
     long startTime = SystemClock.uptimeMillis();
     for (int i = 0; i < DIM_IMG_SIZE_X; ++i) {
       for (int j = 0; j < DIM_IMG_SIZE_Y; ++j) {
-        final int val = intValues[pixel++];
+        final int val = intValues[pixel];
         imgData.put((byte) ((val >> 16) & 0xFF));
         imgData.put((byte) ((val >> 8) & 0xFF));
         imgData.put((byte) (val & 0xFF));
+
+        mImageData[pixel * DIM_PIXEL_SIZE] = (byte) ((val >> 16) & 0xFF);
+        mImageData[pixel * DIM_PIXEL_SIZE + 1] =(byte) ((val >> 8) & 0xFF);
+        mImageData[pixel * DIM_PIXEL_SIZE + 2] =(byte) (val & 0xFF);
+        pixel++;
       }
     }
     long endTime = SystemClock.uptimeMillis();
@@ -238,6 +287,26 @@ public class ImageClassifier {
     String fileDir = mFileDir;
     boolean res = mNCNNNet.load(fileDir + NCNN_MOBILE_NET_PARAM_FILE_NAME, fileDir + NCNN_MOBILE_NET_MODEL_FILE_NAME);
     Log.i(TAG, "NCNN res " + res);
+  }
+
+  private String printTopKLabels(List<String> list, float[] score) {
+    for (int i = 0; i < list.size(); ++i) {
+      sortedLabels.add(new AbstractMap.SimpleEntry<>(list.get(i), score[i]));
+      if (sortedLabels.size() > RESULTS_TO_SHOW) {
+        sortedLabels.poll();
+      }
+    }
+    String textToShow = "";
+    final int size = sortedLabels.size();
+    for (int i = 0; i < size; ++i) {
+      Map.Entry<String, Float> label = sortedLabels.poll();
+      String key = label.getKey();
+      if (key.length() > 20) {
+        key = key.substring(0, 20);
+      }
+      textToShow = String.format("\n%s: %4.2f", key, label.getValue()) + textToShow;
+    }
+    return textToShow;
   }
 
   private void copyAssetToSDCard(Activity activity, String fileName) {
