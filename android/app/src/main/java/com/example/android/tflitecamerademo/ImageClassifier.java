@@ -179,7 +179,7 @@ public class ImageClassifier {
     long startTime = SystemClock.uptimeMillis();
     tflite.run(imgData, labelProbArray);
     long endTime = SystemClock.uptimeMillis();
-    Log.d(TAG, "Timecost to run model inference: " + Long.toString(endTime - startTime));
+    //Log.d(TAG, "Timecost to run model inference: " + Long.toString(endTime - startTime));
 
     // Smooth the results across frames.
     applyFilter();
@@ -257,6 +257,7 @@ public class ImageClassifier {
       return;
     }
     imgData.rewind();
+    // ARGB_8888
     bitmap.getPixels(intValues, 0, bitmap.getWidth(), 0, 0, bitmap.getWidth(), bitmap.getHeight());
     // Convert the image to floating point.
     int pixel = 0;
@@ -275,7 +276,7 @@ public class ImageClassifier {
       }
     }
     long endTime = SystemClock.uptimeMillis();
-    Log.d(TAG, "Timecost to put values into ByteBuffer: " + Long.toString(endTime - startTime));
+    //Log.d(TAG, "Timecost to put values into ByteBuffer: " + Long.toString(endTime - startTime));
   }
 
   /** Prints top-K labels, to be shown in UI as the results. */
