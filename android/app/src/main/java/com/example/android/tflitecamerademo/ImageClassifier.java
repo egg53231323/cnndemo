@@ -46,11 +46,10 @@ import org.tensorflow.lite.Interpreter;
 /** Classifies images with Tensorflow Lite. */
 public class ImageClassifier {
 
-  public enum PROCESS_TYPE {
-    TF_LITE, // tensorflow lite
-    NCNN, // tencent ncnn
-    MDL // baidu mobile deep learning
-  }
+  public static final int TYPE_TF_LITE = 0;
+  public static final int TYPE_NCNN = 1;
+  public static final int TYPE_MDL = 2;
+
   /** Tag for the {@link Log}. */
   private static final String TAG = "TfLiteCameraDemo";
 
@@ -91,7 +90,8 @@ public class ImageClassifier {
   private static final int FILTER_STAGES = 3;
   private static final float FILTER_FACTOR = 0.4f;
 
-  private PROCESS_TYPE mType = PROCESS_TYPE.NCNN;
+  private String[] mTypeName;
+  private int mType = TYPE_TF_LITE;
   private String mFileDir = "";
   private static final String NCNN_MOBILE_NET_PARAM_FILE_NAME = "mobilenet_v2.param";
   private static final String NCNN_MOBILE_NET_MODEL_FILE_NAME = "mobilenet_v2.bin";
@@ -133,28 +133,45 @@ public class ImageClassifier {
       }
       mNCNNLabelList.set(i, label);
     }
+
+    mTypeName = new String[3];
+    mTypeName[TYPE_TF_LITE] = "TF_Lite";
+    mTypeName[TYPE_NCNN] = "NCNN";
+    mTypeName[TYPE_MDL] = "MDL";
+  }
+
+  String[] getTypeName() {
+    return mTypeName;
   }
 
   /** Classifies a frame from the preview stream. */
   String classifyFrame(Bitmap bitmap) {
     convertBitmapToByteBuffer(bitmap);
     String textToShow = "";
+    String textType = mTypeName[mType];
     switch (mType) {
-      case TF_LITE:
+      case TYPE_TF_LITE:
         if (tflite == null) {
           Log.e(TAG, "Image classifier has not been initialized; Skipped.");
           return "Uninitialized Classifier.";
         }
         textToShow = classifyFrame_TF_Lite();
         break;
-      case NCNN:
+      case TYPE_NCNN:
         textToShow = classifyFrame_NCNN();
+        break;
+      case TYPE_MDL:
+        textToShow = classifyFrame_TF_Lite();
         break;
       default:
         textToShow = classifyFrame_TF_Lite();
         break;
     }
-    return textToShow;
+    return textType + ": " + textToShow;
+  }
+
+  public void setType(int type) {
+    mType = type;
   }
 
   String classifyFrame_TF_Lite() {

@@ -54,6 +54,7 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.io.IOException;
@@ -83,6 +84,8 @@ public class Camera2BasicFragment extends Fragment
   private boolean checkedPermissions = false;
   private TextView textView;
   private ImageClassifier classifier;
+  private Button mBtnType;
+  private int mType = ImageClassifier.TYPE_TF_LITE;
 
   /** Max preview width that is guaranteed by Camera2 API */
   private static final int MAX_PREVIEW_WIDTH = 1920;
@@ -289,6 +292,16 @@ public class Camera2BasicFragment extends Fragment
   public void onViewCreated(final View view, Bundle savedInstanceState) {
     textureView = (AutoFitTextureView) view.findViewById(R.id.texture);
     textView = (TextView) view.findViewById(R.id.text);
+    mBtnType = (Button) view.findViewById(R.id.btnType);
+    mBtnType.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        String[] typeName = classifier.getTypeName();
+        mType = (mType + 1) % typeName.length;
+        classifier.setType(mType);
+        mBtnType.setText(typeName[mType]);
+      }
+    });
   }
 
   /** Load the model and labels. */
@@ -297,6 +310,7 @@ public class Camera2BasicFragment extends Fragment
     super.onActivityCreated(savedInstanceState);
     try {
       classifier = new ImageClassifier(getActivity());
+      classifier.setType(mType);
     } catch (IOException e) {
       Log.e(TAG, "Failed to initialize an image classifier.");
     }
