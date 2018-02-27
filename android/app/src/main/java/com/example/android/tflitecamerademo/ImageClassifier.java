@@ -103,10 +103,11 @@ public class ImageClassifier {
   private NCNNNet mNCNNNet;
   private List<String> mNCNNLabelList;
 
-  private static final String MDL_MOBILE_NET_MODEL_FILE_NAME = "m_model.min.json";
-  private static final String MDL_MOBILE_NET_PARAM_FILE_NAME = "m_data.min.bin";
-  private static final String MDL_MOBILE_NET_LABEL_FILE_NAME = "mobilenet_v2.txt";
+  private static final String MDL_MOBILE_NET_MODEL_FILE_NAME = "mdl_model.min.json";
+  private static final String MDL_MOBILE_NET_PARAM_FILE_NAME = "mdl_data.min.bin";
   private float[] mMDLImageData;
+  private List<String> mMDLLabelList;
+  private MDL mMDL;
 
   private PriorityQueue<Map.Entry<String, Float>> sortedLabels =
       new PriorityQueue<>(
@@ -144,6 +145,7 @@ public class ImageClassifier {
 
     InitMDL(activity);
     mMDLImageData = new float[DIM_IMG_SIZE_X * DIM_IMG_SIZE_Y * DIM_PIXEL_SIZE];
+    mMDLLabelList = mNCNNLabelList;
 
     mTypeName = new String[3];
     mTypeName[TYPE_TF_LITE] = "TF_Lite";
@@ -217,23 +219,26 @@ public class ImageClassifier {
     int offset = DIM_IMG_SIZE_X * DIM_IMG_SIZE_Y;
     for (int i = 0; i < DIM_IMG_SIZE_X; ++i) {
       for (int j = 0; j < DIM_IMG_SIZE_Y; ++j) {
-        mMDLImageData[pixel] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - 123.68) * 0.017);
-        mMDLImageData[pixel + offset] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - 116.78) * 0.017);
-        mMDLImageData[pixel + offset * 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - 103.94) * 0.017);
+        mMDLImageData[pixel + offset * 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - 123.68) * 0.017);
+        mMDLImageData[pixel + offset * 1] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - 116.78) * 0.017);
+        mMDLImageData[pixel + offset * 0] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - 103.94) * 0.017);
+        //mMDLImageData[pixel * DIM_PIXEL_SIZE + 0] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - 123.68) * 0.017);
+        //mMDLImageData[pixel * DIM_PIXEL_SIZE + 1] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - 116.78) * 0.017);
+        //mMDLImageData[pixel * DIM_PIXEL_SIZE + 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - 103.94) * 0.017);
         pixel++;
       }
     }
-    float[] res = null;
+    float[] score = null;
     try {
-      res = MDL.predictImage(mMDLImageData);
+      score = mMDL.predictImage(mMDLImageData);
     }
     catch (MDLException e) {
       e.printStackTrace();
     }
     long endTime = SystemClock.uptimeMillis();
 
-    String textToShow = "";
-    textToShow = Long.toString(endTime - startTime) + "ms" + textToShow;
+    String textToShow = printTopKLabels(mMDLLabelList, score);
+    textToShow = Long.toString(endTime - startTime) + "ms" + " n:" + score.length + " " + textToShow;
     return textToShow;
   }
 
@@ -349,9 +354,10 @@ public class ImageClassifier {
     copyAssetToSDCard(activity, MDL_MOBILE_NET_MODEL_FILE_NAME);
     String fileDir = mFileDir;
     try {
-      boolean res = MDL.load(mFileDir + MDL_MOBILE_NET_MODEL_FILE_NAME, mFileDir + MDL_MOBILE_NET_PARAM_FILE_NAME);
+      mMDL = new MDL();
+      boolean res = mMDL.load(mFileDir + MDL_MOBILE_NET_MODEL_FILE_NAME, mFileDir + MDL_MOBILE_NET_PARAM_FILE_NAME);
       Log.i(TAG, "MDL model load " + res);
-      MDL.setThreadNum(4);
+      mMDL.setThreadNum(1);
     }
     catch (MDLException e) {
       e.printStackTrace();
@@ -360,6 +366,7 @@ public class ImageClassifier {
   }
 
   private String printTopKLabels(List<String> list, float[] score) {
+    sortedLabels.clear();
     for (int i = 0; i < list.size(); ++i) {
       sortedLabels.add(new AbstractMap.SimpleEntry<>(list.get(i), score[i]));
       if (sortedLabels.size() > RESULTS_TO_SHOW) {
