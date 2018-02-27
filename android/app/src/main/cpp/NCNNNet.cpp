@@ -44,6 +44,7 @@ void NCNNNet::clear() {
 bool NCNNNet::predict(unsigned char *data, int width, int height, int format, int threadNum /* = 0*/) {
     ncnn::Mat in = ncnn::Mat::from_pixels(data, format, width, height);
 
+    // TODO 这个的顺序和RGB的关系?
     const float mean_vals[3] = {103.94f, 116.78f, 123.68f};
     const float norm_vals[3] = {0.017f,0.017f,0.017f};
     in.substract_mean_normalize(mean_vals, norm_vals);

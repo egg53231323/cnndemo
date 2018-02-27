@@ -22,6 +22,8 @@ import android.os.Environment;
 import android.os.SystemClock;
 import android.util.Log;
 
+import com.baidu.mdl.demo.MDL;
+import com.baidu.mdl.demo.MDLException;
 import com.h3d.NCNNNet;
 
 import java.io.BufferedReader;
@@ -93,12 +95,18 @@ public class ImageClassifier {
   private String[] mTypeName;
   private int mType = TYPE_TF_LITE;
   private String mFileDir = "";
+
   private static final String NCNN_MOBILE_NET_PARAM_FILE_NAME = "mobilenet_v2.param";
   private static final String NCNN_MOBILE_NET_MODEL_FILE_NAME = "mobilenet_v2.bin";
   private static final String NCNN_MOBILE_NET_LABEL_FILE_NAME = "mobilenet_v2.txt";
   private byte[] mImageData;
   private NCNNNet mNCNNNet;
   private List<String> mNCNNLabelList;
+
+  private static final String MDL_MOBILE_NET_MODEL_FILE_NAME = "m_model.min.json";
+  private static final String MDL_MOBILE_NET_PARAM_FILE_NAME = "m_data.min.bin";
+  private static final String MDL_MOBILE_NET_LABEL_FILE_NAME = "mobilenet_v2.txt";
+  private float[] mMDLImageData;
 
   private PriorityQueue<Map.Entry<String, Float>> sortedLabels =
       new PriorityQueue<>(
@@ -134,6 +142,9 @@ public class ImageClassifier {
       mNCNNLabelList.set(i, label);
     }
 
+    InitMDL(activity);
+    mMDLImageData = new float[DIM_IMG_SIZE_X * DIM_IMG_SIZE_Y * DIM_PIXEL_SIZE];
+
     mTypeName = new String[3];
     mTypeName[TYPE_TF_LITE] = "TF_Lite";
     mTypeName[TYPE_NCNN] = "NCNN";
@@ -161,7 +172,7 @@ public class ImageClassifier {
         textToShow = classifyFrame_NCNN();
         break;
       case TYPE_MDL:
-        textToShow = classifyFrame_TF_Lite();
+        textToShow = classifyFrame_MDL();
         break;
       default:
         textToShow = classifyFrame_TF_Lite();
@@ -196,6 +207,32 @@ public class ImageClassifier {
     long endTime = SystemClock.uptimeMillis();
     float[] score = mNCNNNet.getScore();
     String textToShow = printTopKLabels(mNCNNLabelList, score);
+    textToShow = Long.toString(endTime - startTime) + "ms" + textToShow;
+    return textToShow;
+  }
+
+  String classifyFrame_MDL() {
+    long startTime = SystemClock.uptimeMillis();
+    int pixel = 0;
+    int offset = DIM_IMG_SIZE_X * DIM_IMG_SIZE_Y;
+    for (int i = 0; i < DIM_IMG_SIZE_X; ++i) {
+      for (int j = 0; j < DIM_IMG_SIZE_Y; ++j) {
+        mMDLImageData[pixel] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - 123.68) * 0.017);
+        mMDLImageData[pixel + offset] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - 116.78) * 0.017);
+        mMDLImageData[pixel + offset * 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - 103.94) * 0.017);
+        pixel++;
+      }
+    }
+    float[] res = null;
+    try {
+      res = MDL.predictImage(mMDLImageData);
+    }
+    catch (MDLException e) {
+      e.printStackTrace();
+    }
+    long endTime = SystemClock.uptimeMillis();
+
+    String textToShow = "";
     textToShow = Long.toString(endTime - startTime) + "ms" + textToShow;
     return textToShow;
   }
@@ -305,6 +342,21 @@ public class ImageClassifier {
     String fileDir = mFileDir;
     boolean res = mNCNNNet.load(fileDir + NCNN_MOBILE_NET_PARAM_FILE_NAME, fileDir + NCNN_MOBILE_NET_MODEL_FILE_NAME);
     Log.i(TAG, "NCNN res " + res);
+  }
+
+  private void InitMDL(Activity activity) {
+    copyAssetToSDCard(activity, MDL_MOBILE_NET_PARAM_FILE_NAME);
+    copyAssetToSDCard(activity, MDL_MOBILE_NET_MODEL_FILE_NAME);
+    String fileDir = mFileDir;
+    try {
+      boolean res = MDL.load(mFileDir + MDL_MOBILE_NET_MODEL_FILE_NAME, mFileDir + MDL_MOBILE_NET_PARAM_FILE_NAME);
+      Log.i(TAG, "MDL model load " + res);
+      MDL.setThreadNum(4);
+    }
+    catch (MDLException e) {
+      e.printStackTrace();
+    }
+
   }
 
   private String printTopKLabels(List<String> list, float[] score) {
