@@ -98,6 +98,8 @@ public class ImageClassifier {
 
   private static final String NCNN_MOBILE_NET_PARAM_FILE_NAME = "mobilenet_v2.param";
   private static final String NCNN_MOBILE_NET_MODEL_FILE_NAME = "mobilenet_v2.bin";
+  private static final String NCNN_GOOGLE_NET_PARAM_FILE_NAME = "ncnn_bvlc_googlenet.param";
+  private static final String NCNN_GOOGLE_NET_MODEL_FILE_NAME = "ncnn_bvlc_googlenet.bin";
   private static final String NCNN_MOBILE_NET_LABEL_FILE_NAME = "mobilenet_v2.txt";
   private byte[] mImageData;
   private NCNNNet mNCNNNet;
@@ -105,9 +107,18 @@ public class ImageClassifier {
 
   private static final String MDL_MOBILE_NET_MODEL_FILE_NAME = "mdl_model.min.json";
   private static final String MDL_MOBILE_NET_PARAM_FILE_NAME = "mdl_data.min.bin";
+  private static final String MDL_GOOGLE_NET_MODEL_FILE_NAME = "mdl_bvlc_googlenet.min.json";
+  private static final String MDL_GOOGLE_NET_PARAM_FILE_NAME = "mdl_bvlc_googlenet.min.bin";
   private float[] mMDLImageData;
   private List<String> mMDLLabelList;
   private MDL mMDL;
+
+
+  private float[] mGoogleNetRGBMean;
+  private float[] mMobileNetRGBMean;
+  private float[] mMobileNetRGBScale;
+
+  private boolean mUseMobileNet = true;
 
   private PriorityQueue<Map.Entry<String, Float>> sortedLabels =
       new PriorityQueue<>(
@@ -121,6 +132,28 @@ public class ImageClassifier {
 
   /** Initializes an {@code ImageClassifier}. */
   ImageClassifier(Activity activity) throws IOException {
+    //const float mean_vals[3] = {103.94f, 116.78f, 123.68f};
+    //const float norm_vals[3] = {0.017f,0.017f,0.017f};
+
+    mMobileNetRGBMean = new float[3];
+    mMobileNetRGBMean[0] = 103.94f;
+    mMobileNetRGBMean[1] = 116.78f;
+    mMobileNetRGBMean[2] = 123.68f;
+
+    mMobileNetRGBScale = new float[3];
+    mMobileNetRGBScale[0] = 0.017f;
+    mMobileNetRGBScale[1] = 0.017f;
+    mMobileNetRGBScale[2] = 0.017f;
+
+    mGoogleNetRGBMean = new float[3];
+    mGoogleNetRGBMean[0] = 103.94f;
+    mGoogleNetRGBMean[1] = 116.78f;
+    mGoogleNetRGBMean[2] = 123.68f;
+    //mGoogleNetRGBMean[0] = 148;
+    //mGoogleNetRGBMean[1] = 148;
+    //mGoogleNetRGBMean[2] = 148;
+
+
     tflite = new Interpreter(loadModelFile(activity));
     labelList = loadLabelList(activity, LABEL_PATH);
     imgData =
@@ -195,7 +228,7 @@ public class ImageClassifier {
     //Log.d(TAG, "Timecost to run model inference: " + Long.toString(endTime - startTime));
 
     // Smooth the results across frames.
-    applyFilter();
+    //applyFilter();
 
     // Print the results.
     String textToShow = printTopKLabels();
@@ -214,20 +247,37 @@ public class ImageClassifier {
   }
 
   String classifyFrame_MDL() {
-    long startTime = SystemClock.uptimeMillis();
+
     int pixel = 0;
     int offset = DIM_IMG_SIZE_X * DIM_IMG_SIZE_Y;
-    for (int i = 0; i < DIM_IMG_SIZE_X; ++i) {
-      for (int j = 0; j < DIM_IMG_SIZE_Y; ++j) {
-        mMDLImageData[pixel + offset * 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - 123.68) * 0.017);
-        mMDLImageData[pixel + offset * 1] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - 116.78) * 0.017);
-        mMDLImageData[pixel + offset * 0] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - 103.94) * 0.017);
-        //mMDLImageData[pixel * DIM_PIXEL_SIZE + 0] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - 123.68) * 0.017);
-        //mMDLImageData[pixel * DIM_PIXEL_SIZE + 1] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - 116.78) * 0.017);
-        //mMDLImageData[pixel * DIM_PIXEL_SIZE + 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - 103.94) * 0.017);
-        pixel++;
+    if (mUseMobileNet) {
+      for (int i = 0; i < DIM_IMG_SIZE_X; ++i) {
+        for (int j = 0; j < DIM_IMG_SIZE_Y; ++j) {
+          mMDLImageData[pixel] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - mMobileNetRGBMean[0]) * mMobileNetRGBScale[0]);
+          mMDLImageData[pixel + offset] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - mMobileNetRGBMean[1]) * mMobileNetRGBScale[1]);
+          mMDLImageData[pixel + offset * 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - mMobileNetRGBMean[2]) * mMobileNetRGBScale[2]);
+          //mMDLImageData[pixel * DIM_PIXEL_SIZE + 0] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - 123.68) * 0.017);
+          //mMDLImageData[pixel * DIM_PIXEL_SIZE + 1] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - 116.78) * 0.017);
+          //mMDLImageData[pixel * DIM_PIXEL_SIZE + 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - 103.94) * 0.017);
+          pixel++;
+        }
       }
     }
+    else {
+      for (int i = 0; i < DIM_IMG_SIZE_X; ++i) {
+        for (int j = 0; j < DIM_IMG_SIZE_Y; ++j) {
+          //mMDLImageData[pixel] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - mGoogleNetRGBMean[0]));
+          //mMDLImageData[pixel + offset] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - mGoogleNetRGBMean[1]));
+          //mMDLImageData[pixel + offset * 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - mGoogleNetRGBMean[2]));
+          mMDLImageData[pixel * DIM_PIXEL_SIZE + 0] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - mGoogleNetRGBMean[0]));
+          mMDLImageData[pixel * DIM_PIXEL_SIZE + 1] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - mGoogleNetRGBMean[1]));
+          mMDLImageData[pixel * DIM_PIXEL_SIZE + 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - mGoogleNetRGBMean[2]));
+          pixel++;
+        }
+      }
+    }
+
+    long startTime = SystemClock.uptimeMillis();
     float[] score = null;
     try {
       score = mMDL.predictImage(mMDLImageData);
@@ -238,7 +288,7 @@ public class ImageClassifier {
     long endTime = SystemClock.uptimeMillis();
 
     String textToShow = printTopKLabels(mMDLLabelList, score);
-    textToShow = Long.toString(endTime - startTime) + "ms" + " n:" + score.length + " " + textToShow;
+    textToShow = Long.toString(endTime - startTime) + "ms" + textToShow;
     return textToShow;
   }
 
@@ -341,21 +391,40 @@ public class ImageClassifier {
 
 
   private void InitNCNN(Activity activity) {
-    copyAssetToSDCard(activity, NCNN_MOBILE_NET_PARAM_FILE_NAME);
-    copyAssetToSDCard(activity, NCNN_MOBILE_NET_MODEL_FILE_NAME);
+    String paramFile = NCNN_MOBILE_NET_PARAM_FILE_NAME;
+    String modelFile = NCNN_MOBILE_NET_MODEL_FILE_NAME;
+    if (!mUseMobileNet) {
+      paramFile = NCNN_GOOGLE_NET_PARAM_FILE_NAME;
+      modelFile = NCNN_GOOGLE_NET_MODEL_FILE_NAME;
+    }
+    copyAssetToSDCard(activity, paramFile);
+    copyAssetToSDCard(activity, modelFile);
     mNCNNNet = new NCNNNet();
+    if (mUseMobileNet) {
+      mNCNNNet.setMeanAndNorm(mMobileNetRGBMean, mMobileNetRGBScale);
+    }
+    else {
+      mNCNNNet.setMeanAndNorm(mGoogleNetRGBMean, null);
+    }
+
     String fileDir = mFileDir;
-    boolean res = mNCNNNet.load(fileDir + NCNN_MOBILE_NET_PARAM_FILE_NAME, fileDir + NCNN_MOBILE_NET_MODEL_FILE_NAME);
+    boolean res = mNCNNNet.load(fileDir + paramFile, fileDir + modelFile);
     Log.i(TAG, "NCNN res " + res);
   }
 
   private void InitMDL(Activity activity) {
-    copyAssetToSDCard(activity, MDL_MOBILE_NET_PARAM_FILE_NAME);
-    copyAssetToSDCard(activity, MDL_MOBILE_NET_MODEL_FILE_NAME);
+    String paramFile = MDL_MOBILE_NET_PARAM_FILE_NAME;
+    String modelFile = MDL_MOBILE_NET_MODEL_FILE_NAME;
+    if (!mUseMobileNet) {
+      paramFile = MDL_GOOGLE_NET_PARAM_FILE_NAME;
+      modelFile = MDL_GOOGLE_NET_MODEL_FILE_NAME;
+    }
+    copyAssetToSDCard(activity, paramFile);
+    copyAssetToSDCard(activity, modelFile);
     String fileDir = mFileDir;
     try {
       mMDL = new MDL();
-      boolean res = mMDL.load(mFileDir + MDL_MOBILE_NET_MODEL_FILE_NAME, mFileDir + MDL_MOBILE_NET_PARAM_FILE_NAME);
+      boolean res = mMDL.load(mFileDir + modelFile, mFileDir + paramFile);
       Log.i(TAG, "MDL model load " + res);
       mMDL.setThreadNum(1);
     }

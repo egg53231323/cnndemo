@@ -27,6 +27,10 @@ public class NCNNNet {
         return nativePredict(mObj, data, width, height, format, 4, mScore);
     }
 
+    public void setMeanAndNorm(float[] mean, float[] norm) {
+        nativeSetMeanAndNorm(mObj, mean, norm);
+    }
+
     public float[] getScore() {
         return mScore;
     }
@@ -35,4 +39,5 @@ public class NCNNNet {
     private native void nativeDestroyInstance(long obj);
     private native boolean nativeLoad(long obj, String paramPath, String modelPath);
     private native boolean nativePredict(long obj, byte[] data, int width, int height, int format, int threadNum, float[] score);
+    private native void nativeSetMeanAndNorm(long obj, float[] mean, float[] norm);
 }

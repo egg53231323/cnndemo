@@ -6,7 +6,7 @@
 #include "../libs/ncnn-android-lib/include/net.h"
 #include "Utility.h"
 
-NCNNNet::NCNNNet(): mNet(NULL), mRes(NULL) {
+NCNNNet::NCNNNet(): mNet(NULL), mRes(NULL), mMeanVals(NULL), mNormVals(NULL) {
     mNet = new ncnn::Net();
     mRes = new ncnn::Mat();
 }
@@ -20,6 +20,7 @@ NCNNNet::~NCNNNet() {
         delete mRes;
         mRes = NULL;
     }
+    resetMeanNorm();
 }
 
 bool NCNNNet::load(const char *param, const char *model) {
@@ -41,13 +42,33 @@ void NCNNNet::clear() {
     mNet->clear();
 }
 
+void NCNNNet::setMeanAndNorm(float *mean, int meanSize, float *norm, int normSize) {
+    resetMeanNorm();
+    if (NULL != mean && meanSize > 0) {
+        mMeanVals = new float[meanSize];
+        memcpy(mMeanVals, mean, sizeof(float) * meanSize);
+    }
+    if (NULL != norm && normSize > 0) {
+        mNormVals = new float[normSize];
+        memcpy(mNormVals, norm, sizeof(float) * normSize);
+    }
+}
+
+void NCNNNet::resetMeanNorm() {
+    if (NULL != mMeanVals) {
+        delete []mMeanVals;
+        mMeanVals = NULL;
+    }
+    if (NULL != mNormVals) {
+        delete []mNormVals;
+        mNormVals = NULL;
+    }
+}
+
 bool NCNNNet::predict(unsigned char *data, int width, int height, int format, int threadNum /* = 0*/) {
     ncnn::Mat in = ncnn::Mat::from_pixels(data, format, width, height);
-
-    // TODO 这个的顺序和RGB的关系?
-    const float mean_vals[3] = {103.94f, 116.78f, 123.68f};
-    const float norm_vals[3] = {0.017f,0.017f,0.017f};
-    in.substract_mean_normalize(mean_vals, norm_vals);
+    
+    in.substract_mean_normalize(mMeanVals, mNormVals);
 
     ncnn::Extractor ex = mNet->create_extractor();
     if (threadNum > 0) {

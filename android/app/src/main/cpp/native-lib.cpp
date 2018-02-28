@@ -67,3 +67,30 @@ Java_com_h3d_NCNNNet_nativePredict(JNIEnv *env, jobject instance, jlong obj, jby
     env->ReleaseByteArrayElements(data_, data, 0);
     return res;
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_h3d_NCNNNet_nativeSetMeanAndNorm(JNIEnv *env, jobject instance, jlong obj, jfloatArray mean_,
+                                    jfloatArray norm_) {
+    NCNNNet *net = (NCNNNet*)obj;
+    if (NULL == net || NULL == mean_) {
+        return;
+    }
+    jfloat *mean = env->GetFloatArrayElements(mean_, NULL);
+    jfloat *norm = NULL;
+    if (NULL != norm_) {
+        norm = env->GetFloatArrayElements(norm_, NULL);
+    }
+
+    int sizeMean = env->GetArrayLength(mean_);
+    int sizeNorm = 0;
+    if (NULL != norm_) {
+        sizeNorm = env->GetArrayLength(norm_);
+    }
+    net->setMeanAndNorm(mean, sizeMean, norm, sizeNorm);
+
+    env->ReleaseFloatArrayElements(mean_, mean, 0);
+    if (NULL != norm_) {
+        env->ReleaseFloatArrayElements(norm_, norm, 0);
+    }
+}
