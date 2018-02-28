@@ -96,8 +96,8 @@ public class ImageClassifier {
   private int mType = TYPE_TF_LITE;
   private String mFileDir = "";
 
-  private static final String NCNN_MOBILE_NET_PARAM_FILE_NAME = "mobilenet_v2.param";
-  private static final String NCNN_MOBILE_NET_MODEL_FILE_NAME = "mobilenet_v2.bin";
+  private static final String NCNN_MOBILE_NET_PARAM_FILE_NAME = "mobilenet.param";
+  private static final String NCNN_MOBILE_NET_MODEL_FILE_NAME = "mobilenet.bin";
   private static final String NCNN_GOOGLE_NET_PARAM_FILE_NAME = "ncnn_bvlc_googlenet.param";
   private static final String NCNN_GOOGLE_NET_MODEL_FILE_NAME = "ncnn_bvlc_googlenet.bin";
   private static final String NCNN_MOBILE_NET_LABEL_FILE_NAME = "mobilenet_v2.txt";
