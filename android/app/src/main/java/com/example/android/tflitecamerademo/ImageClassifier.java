@@ -256,9 +256,6 @@ public class ImageClassifier {
           mMDLImageData[pixel] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - mMobileNetRGBMean[0]) * mMobileNetRGBScale[0]);
           mMDLImageData[pixel + offset] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - mMobileNetRGBMean[1]) * mMobileNetRGBScale[1]);
           mMDLImageData[pixel + offset * 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - mMobileNetRGBMean[2]) * mMobileNetRGBScale[2]);
-          //mMDLImageData[pixel * DIM_PIXEL_SIZE + 0] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - 123.68) * 0.017);
-          //mMDLImageData[pixel * DIM_PIXEL_SIZE + 1] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - 116.78) * 0.017);
-          //mMDLImageData[pixel * DIM_PIXEL_SIZE + 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - 103.94) * 0.017);
           pixel++;
         }
       }
@@ -266,12 +263,9 @@ public class ImageClassifier {
     else {
       for (int i = 0; i < DIM_IMG_SIZE_X; ++i) {
         for (int j = 0; j < DIM_IMG_SIZE_Y; ++j) {
-          //mMDLImageData[pixel] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - mGoogleNetRGBMean[0]));
-          //mMDLImageData[pixel + offset] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - mGoogleNetRGBMean[1]));
-          //mMDLImageData[pixel + offset * 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - mGoogleNetRGBMean[2]));
-          mMDLImageData[pixel * DIM_PIXEL_SIZE + 0] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - mGoogleNetRGBMean[0]));
-          mMDLImageData[pixel * DIM_PIXEL_SIZE + 1] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - mGoogleNetRGBMean[1]));
-          mMDLImageData[pixel * DIM_PIXEL_SIZE + 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - mGoogleNetRGBMean[2]));
+          mMDLImageData[pixel] = (float)((mImageData[pixel * DIM_PIXEL_SIZE] - mGoogleNetRGBMean[0]));
+          mMDLImageData[pixel + offset] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 1] - mGoogleNetRGBMean[1]));
+          mMDLImageData[pixel + offset * 2] = (float)((mImageData[pixel * DIM_PIXEL_SIZE + 2] - mGoogleNetRGBMean[2]));
           pixel++;
         }
       }
